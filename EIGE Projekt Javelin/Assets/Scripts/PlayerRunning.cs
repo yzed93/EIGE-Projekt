@@ -4,13 +4,12 @@ using UnityEngine;
 
 public class PlayerRunning
 {
+
     public CurrentAction JumpRunning()
     {
         if (jumpInput != 0) {
-            if (doing == CurrentAction.FREERUNNING) {
-                if (Grounded()) {
+            if (Grounded()) {
                     playerRigidbody.velocity = new Vector3(playerRigidbody.velocity.x, moveSettings.jumpVelocity, playerRigidbody.velocity.z);
-                }
             }
         }
         return CurrentAction.FREERUNNING;
