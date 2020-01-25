@@ -51,9 +51,10 @@ public class PlayerAcrobatics
         nullWinkel = -winkelOfDoom;
         runterwärts = true;
     }
-    public PlayerAcrobatics(GameObject playerGameObject)
+    public PlayerAcrobatics(PlayerBehaviour playerBehaviour)
     {
-        this.playerGameObject = playerGameObject;
+        this.playerGameObject = playerBehaviour.gameObject;
+
         this.playerRigidbody = playerGameObject.GetComponent<Rigidbody>();
     }
 

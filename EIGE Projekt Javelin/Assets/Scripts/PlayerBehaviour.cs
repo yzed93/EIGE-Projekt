@@ -22,6 +22,8 @@ public class PlayerBehaviour : MonoBehaviour
 
     void Awake() {
         playerRigidbody = gameObject.GetComponent<Rigidbody>();
+        this.playerAcrobatics = new PlayerAcrobatics(this);
+        
         velocity = Vector3.zero;
         forwardInput = sidewaysInput = lookupInput = turnInput = jumpInput = 0;
         targetRotation = transform.rotation;
@@ -90,18 +92,23 @@ public class PlayerBehaviour : MonoBehaviour
                 playerAcrobatics.ForwardSwinging(forwardInput);
                 break;
             case (CurrentAction.FREERUNNING):
-                playerRunning.ForwardRunning();
+                playerRunning.ForwardRunning(forwardInput, sidewaysInput, doing);
                 break;
         }
     }
     void Jump() {
-        switch (doing)
+        if (jumpInput != 0)
         {
-            case (CurrentAction.SWINGING):
-                playerAcrobatics.JumpSwinging();
-                break;
-            case (CurrentAction.FREERUNNING):
-                break;
+            switch (doing)
+            {
+                case (CurrentAction.SWINGING):
+                    playerAcrobatics.JumpSwinging();
+                    break;
+                case (CurrentAction.FREERUNNING):
+                    if (Grounded())
+                        playerRunning.JumpRunning();
+                    break;
+            }
         }
     }
    
@@ -295,20 +302,6 @@ public class PlayerBehaviour : MonoBehaviour
     {
         this.doing = newState;
     }
-}
-
-[System.Serializable]
-public class MoveSettings {
-    public float runSpeed = 5;
-    public float rotateVelocity = 150;
-    public float lookupVelocity = 150;
-    public float jumpVelocity = 8;
-    public float distanceToGround = 1.3f;
-    public LayerMask ground;
-
-    [SerializeField]
-    [Range(10,100)]
-    public int range;
 }
 
 [System.Serializable]
