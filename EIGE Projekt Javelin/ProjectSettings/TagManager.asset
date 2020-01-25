@@ -6,6 +6,7 @@ TagManager:
   tags:
   - DeathZone
   - Hindernis
+  - Reckstange
   layers:
   - Default
   - TransparentFX
