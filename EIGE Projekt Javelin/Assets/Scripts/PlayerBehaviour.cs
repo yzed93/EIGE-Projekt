@@ -28,7 +28,7 @@ public class PlayerBehaviour : MonoBehaviour
         forwardInput = sidewaysInput = lookupInput = turnInput = jumpInput = 0;
         targetRotation = transform.rotation;
         moving = false;
-        crosshair.SetActive(false);
+        //crosshair.SetActive(false);
         doing = CurrentAction.FREERUNNING;
         Cursor.visible = false;
     }
