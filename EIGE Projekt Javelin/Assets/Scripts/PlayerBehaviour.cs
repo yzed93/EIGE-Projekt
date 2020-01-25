@@ -5,7 +5,10 @@ using UnityEngine;
 [RequireComponent (typeof (Rigidbody))]
 public class PlayerBehaviour : MonoBehaviour
 {
-    private CurrentAction doing;
+    protected CurrentAction doing;
+    private PlayerThrowing playerThrowing;
+    private PlayerAcrobatics playerAcrobatics;
+    private PlayerRunning playerRunning;
 
     public CurrentAction getCurrentAction() {
         return doing;
@@ -69,94 +72,42 @@ public class PlayerBehaviour : MonoBehaviour
     /*      ++++++++++      */
     /* ++++++++++++++++++++ */
 
-    private Rigidbody playerRigidbody;
-    private Vector3 velocity;
-    private Quaternion targetRotation;
-    private bool moving;
+    protected Rigidbody playerRigidbody;
+    protected Vector3 velocity;
+    protected Quaternion targetRotation;
+    protected bool moving;
 
     public bool isMoving() {
         return moving;
     }
-
-    private float maxWinkel;
-    private float nullWinkel;
-    private float hangWinkel;
-    private bool runterwärts;
-    private float rotateAmount;
     
     public AcrobaticSettings acrobaticSettings;
-    
+
     void Forward() {
-        if (doing == CurrentAction.SWINGING) {
-            rotateAmount = 0;
-
-            float hangWinkelAlt = hangWinkel;
-            hangWinkel = reckstange.rotation.eulerAngles.z - 180;
-            if (hangWinkelAlt * hangWinkel < 0) {
-                runterwärts = !runterwärts;
-                if (forwardInput == 0) {
-                    if (maxWinkel >= acrobaticSettings.chillWinkel + acrobaticSettings.deceleration)
-                    {
-                        maxWinkel -= (acrobaticSettings.deceleration + maxWinkel) / 8f;
-                    }else
-                    {
-                        maxWinkel = acrobaticSettings.chillWinkel;
-                    }
-                }
-            } else if (Mathf.Abs(Mathf.Abs(hangWinkel) - Mathf.Abs(maxWinkel)) < 2 || Mathf.Abs(hangWinkel) - Mathf.Abs(maxWinkel) > 0) {
-                runterwärts = true;
-                if (forwardInput != 0)
-                    maxWinkel += acrobaticSettings.acceleration * (maxWinkel > 0 ? 1 : -1);
-                
-                if (maxWinkel > 130) maxWinkel = 130;
-                if (maxWinkel < acrobaticSettings.chillWinkel) maxWinkel = acrobaticSettings.chillWinkel;
-            }
-
-
-            if (runterwärts) {
-                
-                rotateAmount = ((Mathf.Abs(maxWinkel) - Mathf.Abs(hangWinkel)) / acrobaticSettings.overallSlowness) * (hangWinkel > 0 ? -1 : 1);
-                if (rotateAmount == 0) rotateAmount = (hangWinkel > 0 ? -0.1f : 0.1f);
-            } else {
-
-                rotateAmount = ((Mathf.Abs(hangWinkel) - Mathf.Abs(maxWinkel)) / acrobaticSettings.overallSlowness) * (hangWinkel > 0 ? -1 : 1);
-                if (rotateAmount == 0) rotateAmount = (hangWinkel > 0 ? 0.1f : -0.1f);
-            }
-
-//            Debug.Log(rotateAmount);
-            //Debug.Log((runterwärts? "Runter" : "Hinauf") + ",\thangWinkel=" + hangWinkel + ",\tmaxWinkel=" + maxWinkel + ",\tnullWinkel=" + nullWinkel + ",\tamount=" + rotateAmount);
-            reckstange.Rotate(new Vector3(0, 0, rotateAmount));
-
-        } else if (Grounded()) {
-            velocity.z = forwardInput * moveSettings.runSpeed * ((doing == CurrentAction.AIMING)? 0.5f : 1f);
-            velocity.x = sidewaysInput * moveSettings.runSpeed * ((doing == CurrentAction.AIMING) ? 0.5f : 1f);
-            velocity.y = playerRigidbody.velocity.y;
-
-            playerRigidbody.velocity = transform.TransformDirection(velocity);
+        switch (doing)
+        {
+            case (CurrentAction.SWINGING):
+                playerAcrobatics.ForwardSwinging(forwardInput);
+                break;
+            case (CurrentAction.FREERUNNING):
+                playerRunning.ForwardRunning();
+                break;
         }
     }
-
-
     void Jump() {
-        if (jumpInput != 0) {
-            if (doing == CurrentAction.FREERUNNING) {
-                if (Grounded()) {
-                    playerRigidbody.velocity = new Vector3(playerRigidbody.velocity.x, moveSettings.jumpVelocity, playerRigidbody.velocity.z);
-                }
-            } else if (doing == CurrentAction.SWINGING) {
-                this.transform.SetParent(null);
-                doing = CurrentAction.FREERUNNING;
-                playerRigidbody.isKinematic = false;
-                playerRigidbody.useGravity = true;
-                reckstange.transform.rotation = Quaternion.Euler(180, 0, 0);
-
-                Vector3 absprungRichtung = playerRigidbody.transform.forward;
-                Debug.Log(rotateAmount);
-                playerRigidbody.velocity = absprungRichtung * rotateAmount * -acrobaticSettings.absprungPower;
-
-            }
+        switch (doing)
+        {
+            case (CurrentAction.SWINGING):
+                playerAcrobatics.JumpSwinging();
+                break;
+            case (CurrentAction.FREERUNNING):
+                break;
         }
     }
+   
+
+
+   
 
     /* +++++++++++++++++++++++++++++++ */
     /*         +++++++++++++++         */
@@ -181,9 +132,6 @@ public class PlayerBehaviour : MonoBehaviour
                 crosshair.SetActive(false);
                 
             }
-            /*if (!mouseTwoHeld) {
-                doing = CurrentAction.FREERUNNING;
-            }*/
         }
     }
 
@@ -195,30 +143,19 @@ public class PlayerBehaviour : MonoBehaviour
     /* ++++++++++++++++ */
 
     public void maybeShoot() {
-       
         if (doing == CurrentAction.AIMING) {
-
-           
                 if (Input.GetMouseButtonDown(0)) {
 
-                Throw();
+                    playerThrowing.Throw();
                     
                 }
             
         }
     }
 
-    public GameObject direction;
-    public Rigidbody spear;
-    public float throwForce;
+    
 
-    void Throw()
-    {
-        spear.transform.parent = null;
-        spear.isKinematic = false;
-        spear.AddForce(Camera.main.transform.TransformDirection(Vector3.forward) * throwForce, ForceMode.Impulse);
-        spear.AddTorque(spear.transform.TransformDirection(Vector3.up) * 100, ForceMode.Impulse);
-    }
+    
     
 
     /*
@@ -315,37 +252,7 @@ public class PlayerBehaviour : MonoBehaviour
         {
             if (doing != CurrentAction.SWINGING)
             {
-                this.doing = CurrentAction.SWINGING;
-                playerRigidbody.useGravity = false;
-                playerRigidbody.isKinematic = true;
-                reckstange = other.transform.GetChild(0);
-
-                hangWinkel = 0;
-
-                float winkelOfDoom, ankathete, gegenkathete;
-
-                gegenkathete = Mathf.Abs(Mathf.Abs(reckstange.position.y) - Mathf.Abs(transform.position.y));
-                ankathete = Mathf.Abs(Mathf.Abs(reckstange.position.x) - Mathf.Abs(transform.position.x));
-                winkelOfDoom = Mathf.Rad2Deg * Mathf.Atan2(gegenkathete, ankathete);
-                ankathete *= reckstange.position.x > transform.position.x ? 1 : -1;
-
-                winkelOfDoom = 180 - 90 - winkelOfDoom;
-
-                Debug.Log("Ankathete: " + ankathete + "\tGegenkathete: " + gegenkathete + "\tWinkel: " + winkelOfDoom);
-
-                //transform.rotation = Quaternion.LookRotation(reckstange.rotation.eulerAngles);
-                Quaternion.LookRotation(reckstange.right, reckstange.forward);
-                //                transform.RotateAround(transform.position, reckstange.up, 90);
-                transform.RotateAround(transform.position, reckstange.forward, (ankathete > 0 ? winkelOfDoom : -winkelOfDoom));
-                //transform.RotateAround(transform.position, reckstange.up, (ankathete > 0 ? 90 : -90));
-
-
-                reckstange.Rotate(0, 0, winkelOfDoom + (ankathete > 0 ? 0 : -90));
-                this.transform.SetParent(reckstange);
-
-                maxWinkel = winkelOfDoom < 3 ? 3 : (winkelOfDoom + (ankathete > 0 ? 0 : 90));
-                nullWinkel = -winkelOfDoom;
-                runterwärts = true;
+                playerAcrobatics.hangOntoReck(other);
             }
 
         }
@@ -383,24 +290,11 @@ public class PlayerBehaviour : MonoBehaviour
         maybeShoot();
     }
 
-    void FixedUpdate() {
-        
-        
-        
+    /* SkillsetInteraction */
+    public void changeDoing(CurrentAction newState)
+    {
+        this.doing = newState;
     }
-}
-
-
-[System.Serializable]
-public class AcrobaticSettings
-{
-    public float chillWinkel = 3;
-    public float initialRotateSpeed = 3;
-    public float acceleration = 0.1f;
-    public float deceleration = 0.3f;
-    public float overallSlowness = 15;
-    public float absprungPower = 3;
-
 }
 
 [System.Serializable]
